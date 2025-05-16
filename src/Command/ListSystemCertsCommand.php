@@ -83,7 +83,7 @@ class ListSystemCertsCommand extends Command
         $io->title('系统根证书列表');
 
         // 获取系统CA证书路径
-        $caPath = CaBundle::getSystemCaRootBundlePath();
+        $caPath = $this->getCaPath();
 
         if (!$caPath || !file_exists($caPath)) {
             $io->error('无法找到系统根证书文件');
@@ -165,6 +165,14 @@ class ListSystemCertsCommand extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * 获取系统CA证书路径，方便测试时进行模拟
+     */
+    protected function getCaPath(): string
+    {
+        return CaBundle::getSystemCaRootBundlePath();
     }
 
     /**

@@ -11,14 +11,15 @@ use Tourze\CATrustBundle\Command\ListSystemCertsCommand;
 class ListSystemCertsCommandTest extends TestCase
 {
     private CommandTester $commandTester;
+    private ListSystemCertsCommand $command;
 
     protected function setUp(): void
     {
         $application = new Application();
-        $command = new ListSystemCertsCommand();
+        $this->command = new ListSystemCertsCommand();
         
-        $application->add($command);
-        $this->commandTester = new CommandTester($command);
+        $application->add($this->command);
+        $this->commandTester = new CommandTester($this->command);
     }
 
     /**
@@ -64,6 +65,48 @@ class ListSystemCertsCommandTest extends TestCase
     }
 
     /**
+     * 测试带签名算法过滤的搜索功能
+     */
+    public function testSearchWithSignature(): void
+    {
+        // 确保系统根证书存在
+        $caPath = CaBundle::getSystemCaRootBundlePath();
+        if (!$caPath || !file_exists($caPath)) {
+            $this->markTestSkipped('系统根证书文件不存在，跳过测试');
+        }
+
+        // 执行带签名算法过滤的命令
+        $this->commandTester->execute([
+            '--signature' => 'SHA256',
+        ]);
+
+        // 验证输出
+        $output = $this->commandTester->getDisplay();
+        $this->assertStringContainsString('过滤后剩余', $output);
+    }
+
+    /**
+     * 测试显示过期证书功能
+     */
+    public function testShowExpiredCertificates(): void
+    {
+        // 确保系统根证书存在
+        $caPath = CaBundle::getSystemCaRootBundlePath();
+        if (!$caPath || !file_exists($caPath)) {
+            $this->markTestSkipped('系统根证书文件不存在，跳过测试');
+        }
+
+        // 执行命令并显示过期证书
+        $this->commandTester->execute([
+            '--show-expired' => true,
+        ]);
+
+        // 验证输出
+        $output = $this->commandTester->getDisplay();
+        $this->assertStringContainsString('过滤后剩余', $output);
+    }
+
+    /**
      * 测试JSON输出格式
      */
     public function testJsonOutput(): void
@@ -79,9 +122,48 @@ class ListSystemCertsCommandTest extends TestCase
             '--format' => 'json',
         ]);
 
-        // 验证输出是否为有效的JSON
+        // 验证输出
         $output = $this->commandTester->getDisplay();
-        $this->assertJson(trim(preg_replace('/^.*?\[/s', '[', $output)));
+        
+        // 提取JSON部分
+        if (preg_match('/\[\s*{.*}\s*\]/s', $output, $matches)) {
+            $jsonPart = $matches[0];
+            $this->assertJson($jsonPart);
+        } else {
+            $this->assertTrue(false, '无法从输出中提取JSON');
+        }
+    }
+    
+    /**
+     * 测试组合选项的使用
+     */
+    public function testCombinedOptions(): void
+    {
+        // 确保系统根证书存在
+        $caPath = CaBundle::getSystemCaRootBundlePath();
+        if (!$caPath || !file_exists($caPath)) {
+            $this->markTestSkipped('系统根证书文件不存在，跳过测试');
+        }
+
+        // 执行命令并使用多个组合选项
+        $this->commandTester->execute([
+            '--keyword' => 'Root',
+            '--signature' => 'SHA256',
+            '--show-expired' => true,
+            '--format' => 'json',
+        ]);
+
+        // 验证输出
+        $output = $this->commandTester->getDisplay();
+        
+        // 提取JSON部分
+        if (preg_match('/\[\s*{.*}\s*\]/s', $output, $matches)) {
+            $jsonPart = $matches[0];
+            $this->assertJson($jsonPart);
+        } else {
+            // 如果没有找到JSON格式，可能是因为没有匹配的证书
+            $this->assertStringContainsString('未找到匹配的证书', $output);
+        }
     }
     
     /**
@@ -95,7 +177,7 @@ class ListSystemCertsCommandTest extends TestCase
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
-        // 使用 -v 选项执行命令
+        // 使用 --verify 选项执行命令
         $this->commandTester->execute([
             '--verify' => true,
             // 限制处理的证书数量，避免测试过长
@@ -108,5 +190,55 @@ class ListSystemCertsCommandTest extends TestCase
         
         // 注意：由于这是集成测试，我们不验证具体的验证结果
         // 只确保命令能够正常执行且不抛出异常
+    }
+    
+    /**
+     * 测试错误处理 - 无法找到证书文件
+     */
+    public function testHandlingNoCertificateFile(): void
+    {
+        // 模拟情况：getCaPath 返回不存在的路径
+        $mockCommand = $this->getMockBuilder(ListSystemCertsCommand::class)
+            ->onlyMethods(['getCaPath'])
+            ->getMock();
+        $mockCommand->method('getCaPath')->willReturn('/non/existent/path.pem');
+        
+        // 必须给命令设置名称，否则会报错
+        $mockCommand->setName('ca-trust:list-certs');
+        
+        $application = new Application();
+        $application->add($mockCommand);
+        $commandTester = new CommandTester($mockCommand);
+        
+        // 执行命令
+        $commandTester->execute([]);
+        
+        // 验证错误输出
+        $output = $commandTester->getDisplay();
+        $this->assertStringContainsString('无法找到系统根证书文件', $output);
+        
+        // 验证返回的错误代码
+        $this->assertEquals(1, $commandTester->getStatusCode());
+    }
+    
+    /**
+     * 测试空匹配结果场景
+     */
+    public function testEmptyMatchResults(): void
+    {
+        // 确保系统根证书存在
+        $caPath = CaBundle::getSystemCaRootBundlePath();
+        if (!$caPath || !file_exists($caPath)) {
+            $this->markTestSkipped('系统根证书文件不存在，跳过测试');
+        }
+
+        // 执行命令并使用一个不太可能匹配的关键词
+        $this->commandTester->execute([
+            '--keyword' => 'ThisIsAVeryUnlikelyKeywordToMatchAnyCertificate_' . uniqid(),
+        ]);
+
+        // 验证输出中包含警告信息
+        $output = $this->commandTester->getDisplay();
+        $this->assertStringContainsString('未找到匹配的证书', $output);
     }
 } 

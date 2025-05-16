@@ -5,6 +5,7 @@ namespace Tourze\CATrustBundle\Verification\Checker;
 use Spatie\SslCertificate\SslCertificate;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Tourze\CATrustBundle\Verification\CheckerInterface;
 use Tourze\CATrustBundle\Verification\VerificationStatus;
 
@@ -28,7 +29,7 @@ class CrtShChecker implements CheckerInterface
                 return VerificationStatus::UNCERTAIN;
             }
 
-            $client = HttpClient::create();
+            $client = $this->createHttpClient();
             $response = $client->request('GET', $this->apiEndpoint, [
                 'query' => [
                     'q' => $fingerprint,
@@ -57,5 +58,13 @@ class CrtShChecker implements CheckerInterface
     public function getName(): string
     {
         return 'crt.sh';
+    }
+    
+    /**
+     * 创建HTTP客户端，方便测试时进行模拟
+     */
+    protected function createHttpClient(): HttpClientInterface
+    {
+        return HttpClient::create();
     }
 }

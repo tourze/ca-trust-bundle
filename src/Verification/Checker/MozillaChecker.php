@@ -5,6 +5,7 @@ namespace Tourze\CATrustBundle\Verification\Checker;
 use Spatie\SslCertificate\SslCertificate;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Tourze\CATrustBundle\Verification\CheckerInterface;
 use Tourze\CATrustBundle\Verification\VerificationStatus;
 
@@ -61,7 +62,7 @@ class MozillaChecker implements CheckerInterface
     private function loadRootFingerprints(): bool
     {
         try {
-            $client = HttpClient::create();
+            $client = $this->createHttpClient();
             $response = $client->request('GET', $this->apiEndpoint);
 
             if ($response->getStatusCode() !== 200) {
@@ -93,7 +94,7 @@ class MozillaChecker implements CheckerInterface
 
         // 处理头部信息，确定SHA-256指纹所在列
         $headerLine = array_shift($lines);
-        $headers = str_getcsv($headerLine);
+        $headers = str_getcsv($headerLine, ',', '"', '\\');
 
         foreach ($headers as $index => $header) {
             if (stripos($header, 'SHA-256 Fingerprint') !== false) {
@@ -115,7 +116,7 @@ class MozillaChecker implements CheckerInterface
             }
 
             // 按CSV格式解析行
-            $columns = str_getcsv($line);
+            $columns = str_getcsv($line, ',', '"', '\\');
 
             // 确保有足够的列
             if (count($columns) > $fingerprintIndex) {
@@ -134,5 +135,13 @@ class MozillaChecker implements CheckerInterface
     public function getName(): string
     {
         return 'Mozilla';
+    }
+    
+    /**
+     * 创建HTTP客户端，方便测试时进行模拟
+     */
+    protected function createHttpClient(): HttpClientInterface
+    {
+        return HttpClient::create();
     }
 }
