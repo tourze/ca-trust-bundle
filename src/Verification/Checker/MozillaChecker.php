@@ -92,22 +92,18 @@ class MozillaChecker implements CheckerInterface
         $fingerprintIndex = -1;
 
         // 处理头部信息，确定SHA-256指纹所在列
-        if (!empty($lines)) {
-            $headerLine = array_shift($lines);
-            $headers = str_getcsv($headerLine);
+        $headerLine = array_shift($lines);
+        $headers = str_getcsv($headerLine);
 
-            foreach ($headers as $index => $header) {
-                if (stripos($header, 'SHA-256 Fingerprint') !== false) {
-                    $fingerprintIndex = $index;
-                    break;
-                }
+        foreach ($headers as $index => $header) {
+            if (stripos($header, 'SHA-256 Fingerprint') !== false) {
+                $fingerprintIndex = $index;
+                break;
             }
+        }
 
-            // 如果找不到指纹列，返回失败
-            if ($fingerprintIndex === -1) {
-                return false;
-            }
-        } else {
+        // 如果找不到指纹列，返回失败
+        if ($fingerprintIndex === -1) {
             return false;
         }
 
