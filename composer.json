@@ -4,6 +4,7 @@
   "license": "MIT",
   "require": {
     "php": "^8.1",
+    "ext-openssl": "*",
     "composer/ca-bundle": "^1.5.6",
     "spatie/ssl-certificate": "^2.6.9",
     "symfony/config": "^6.4",
