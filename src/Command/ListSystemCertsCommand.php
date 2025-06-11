@@ -132,7 +132,7 @@ class ListSystemCertsCommand extends Command
                 }
 
                 $filteredCerts[] = $sslCert;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 // 忽略无法解析的证书
                 continue;
             }
@@ -412,7 +412,7 @@ class ListSystemCertsCommand extends Command
             if (is_array($certText) && isset($certText['signatureTypeSN'])) {
                 $signatureAlgorithm = $certText['signatureTypeSN'];
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return false;
         }
         
