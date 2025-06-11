@@ -49,7 +49,7 @@ class CrtShChecker implements CheckerInterface
         } catch (ExceptionInterface $e) {
             // 请求异常，返回存疑
             return VerificationStatus::UNCERTAIN;
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             // 其他异常，返回存疑
             return VerificationStatus::UNCERTAIN;
         }
