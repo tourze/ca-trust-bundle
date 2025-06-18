@@ -19,11 +19,12 @@ use Tourze\CATrustBundle\Verification\CheckerInterface;
 use Tourze\CATrustBundle\Verification\VerificationStatus;
 
 #[AsCommand(
-    name: 'ca-trust:list-certs',
+    name: self::NAME,
     description: '列出系统根证书，支持关键词和签名搜索'
 )]
 class ListSystemCertsCommand extends Command
 {
+    public const NAME = 'ca-trust:list-certs';
     /**
      * @var CheckerInterface[] 证书验证器列表
      */
@@ -85,7 +86,7 @@ class ListSystemCertsCommand extends Command
         // 获取系统CA证书路径
         $caPath = $this->getCaPath();
 
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === '' || !file_exists($caPath)) {
             $io->error('无法找到系统根证书文件');
             return Command::FAILURE;
         }
@@ -117,7 +118,7 @@ class ListSystemCertsCommand extends Command
                 $sslCert = SslCertificate::createFromString($cert);
 
                 // 过滤已过期证书
-                if (!$showExpired && $sslCert->isExpired()) {
+                if ($showExpired === false && $sslCert->isExpired()) {
                     continue;
                 }
 
@@ -148,7 +149,7 @@ class ListSystemCertsCommand extends Command
         }
 
         // 如果需要验证证书且有ConsoleOutputInterface
-        if ($verify && $output instanceof ConsoleOutputInterface) {
+        if ($verify === true && $output instanceof ConsoleOutputInterface) {
             // 获取sections
             $progressSection = $output->section();
             $tableSection = $output->section();
@@ -366,7 +367,7 @@ class ListSystemCertsCommand extends Command
         $pattern = '/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/s';
         preg_match_all($pattern, $pemContents, $matches);
 
-        return $matches[0] ?? [];
+        return $matches[0];
     }
 
     /**
@@ -403,20 +404,18 @@ class ListSystemCertsCommand extends Command
      */
     private function matchesSignature(SslCertificate $cert, string $signature): bool
     {
-        // 使用证书对象的属性获取签名算法信息
-        $signatureAlgorithm = '';
-        
-        // 尝试从获取签名算法
+        // 获取证书的签名算法
         try {
-            $certText = openssl_x509_parse(openssl_x509_read($cert->getContents()));
-            if (is_array($certText) && isset($certText['signatureTypeSN'])) {
-                $signatureAlgorithm = $certText['signatureTypeSN'];
+            $signatureAlgorithm = $cert->getSignatureAlgorithm();
+            
+            if (empty($signatureAlgorithm)) {
+                return false;
             }
+            
+            return stripos($signatureAlgorithm, $signature) !== false;
         } catch (\Throwable $e) {
             return false;
         }
-        
-        return (!empty($signatureAlgorithm) && stripos($signatureAlgorithm, $signature) !== false);
     }
     
     /**
