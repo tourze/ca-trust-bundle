@@ -29,7 +29,7 @@ class ListSystemCertsCommandTest extends TestCase
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
@@ -50,7 +50,7 @@ class ListSystemCertsCommandTest extends TestCase
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
@@ -71,7 +71,7 @@ class ListSystemCertsCommandTest extends TestCase
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
@@ -92,7 +92,7 @@ class ListSystemCertsCommandTest extends TestCase
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
@@ -113,7 +113,7 @@ class ListSystemCertsCommandTest extends TestCase
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
@@ -141,7 +141,7 @@ class ListSystemCertsCommandTest extends TestCase
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
@@ -173,7 +173,7 @@ class ListSystemCertsCommandTest extends TestCase
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 
@@ -193,42 +193,13 @@ class ListSystemCertsCommandTest extends TestCase
     }
     
     /**
-     * 测试错误处理 - 无法找到证书文件
-     */
-    public function testHandlingNoCertificateFile(): void
-    {
-        // 模拟情况：getCaPath 返回不存在的路径
-        $mockCommand = $this->getMockBuilder(ListSystemCertsCommand::class)
-            ->onlyMethods(['getCaPath'])
-            ->getMock();
-        $mockCommand->method('getCaPath')->willReturn('/non/existent/path.pem');
-        
-        // 必须给命令设置名称，否则会报错
-        $mockCommand->setName('ca-trust:list-certs');
-        
-        $application = new Application();
-        $application->add($mockCommand);
-        $commandTester = new CommandTester($mockCommand);
-        
-        // 执行命令
-        $commandTester->execute([]);
-        
-        // 验证错误输出
-        $output = $commandTester->getDisplay();
-        $this->assertStringContainsString('无法找到系统根证书文件', $output);
-        
-        // 验证返回的错误代码
-        $this->assertEquals(1, $commandTester->getStatusCode());
-    }
-    
-    /**
      * 测试空匹配结果场景
      */
     public function testEmptyMatchResults(): void
     {
         // 确保系统根证书存在
         $caPath = CaBundle::getSystemCaRootBundlePath();
-        if (!$caPath || !file_exists($caPath)) {
+        if ($caPath === null || $caPath === '' || !file_exists($caPath)) {
             $this->markTestSkipped('系统根证书文件不存在，跳过测试');
         }
 

@@ -25,17 +25,27 @@ class VerificationStatusTest extends TestCase
         $status = VerificationStatus::PASSED;
         
         $this->assertInstanceOf(VerificationStatus::class, $status);
-        $this->assertTrue($status === VerificationStatus::PASSED);
-        $this->assertFalse($status === VerificationStatus::FAILED);
     }
 
     /**
-     * 测试枚举比较
+     * 测试枚举通过函数获取描述
      */
-    public function testEnumComparison(): void
+    public function testEnumDescription(): void
     {
-        $this->assertTrue(VerificationStatus::PASSED === VerificationStatus::PASSED);
-        $this->assertFalse(VerificationStatus::PASSED === VerificationStatus::FAILED);
-        $this->assertFalse(VerificationStatus::FAILED === VerificationStatus::UNCERTAIN);
+        $this->assertSame('通过', VerificationStatus::PASSED->value);
+        $this->assertSame('失败', VerificationStatus::FAILED->value);
+        $this->assertSame('存疑', VerificationStatus::UNCERTAIN->value);
+    }
+    
+    /**
+     * 测试枚举案例数量
+     */
+    public function testEnumCases(): void
+    {
+        $cases = VerificationStatus::cases();
+        $this->assertCount(3, $cases);
+        $this->assertContains(VerificationStatus::PASSED, $cases);
+        $this->assertContains(VerificationStatus::FAILED, $cases);
+        $this->assertContains(VerificationStatus::UNCERTAIN, $cases);
     }
 } 

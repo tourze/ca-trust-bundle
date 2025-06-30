@@ -215,7 +215,7 @@ class ListSystemCertsCommand extends Command
         $verificationResults = [];
         
         foreach ($certificates as $index => $cert) {
-            $certName = $cert->getDomain() ?: $cert->getIssuer() ?: '未知证书';
+            $certName = $cert->getDomain() ?? ($cert->getIssuer() ?? '未知证书');
             
             // 更新进度提示
             $progressSection->overwrite(sprintf(
@@ -228,8 +228,8 @@ class ListSystemCertsCommand extends Command
             // 准备行数据
             $row = [
                 ($index + 1),
-                $cert->getOrganization() ?: '未知',
-                $cert->getIssuer() ?: '未知',
+                $cert->getOrganization() ?? '未知',
+                $cert->getIssuer() ?? '未知',
                 $cert->getDomain(),
                 $cert->getFingerprint(),
                 $cert->validFromDate()->format('Y-m-d'),
@@ -302,7 +302,7 @@ class ListSystemCertsCommand extends Command
         $verificationResults = [];
         
         foreach ($certificates as $index => $cert) {
-            $certName = $cert->getDomain() ?: $cert->getIssuer() ?: '未知证书';
+            $certName = $cert->getDomain() ?? ($cert->getIssuer() ?? '未知证书');
             
             // 更新进度提示
             $progressSection->overwrite(sprintf(
@@ -495,8 +495,8 @@ class ListSystemCertsCommand extends Command
                     $cert = $certificates[$i];
                     $row = [
                         ($i + 1),
-                        $cert->getOrganization() ?: '未知',
-                        $cert->getIssuer() ?: '未知',
+                        $cert->getOrganization() ?? '未知',
+                        $cert->getIssuer() ?? '未知',
                         $cert->getDomain(),
                         $cert->getFingerprint(),
                         $cert->validFromDate()->format('Y-m-d'),
@@ -540,8 +540,8 @@ class ListSystemCertsCommand extends Command
         foreach ($certificates as $i => $cert) {
             $row = [
                 ($i + 1),
-                $cert->getOrganization() ?: '未知',
-                $cert->getIssuer() ?: '未知',
+                $cert->getOrganization() ?? '未知',
+                $cert->getIssuer() ?? '未知',
                 $cert->getDomain(),
                 $cert->getFingerprint(),
                 $cert->validFromDate()->format('Y-m-d'),
@@ -591,8 +591,8 @@ class ListSystemCertsCommand extends Command
 
         foreach ($certificates as $cert) {
             $certData = [
-                'organization' => $cert->getOrganization() ?: '未知',
-                'issuer' => $cert->getIssuer() ?: '未知',
+                'organization' => $cert->getOrganization() ?? '未知',
+                'issuer' => $cert->getIssuer() ?? '未知',
                 'domain' => $cert->getDomain(),
                 'valid_from' => $cert->validFromDate()->format('Y-m-d'),
                 'valid_to' => $cert->expirationDate()->format('Y-m-d'),
