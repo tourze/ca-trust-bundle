@@ -1,8 +1,22 @@
 services:
-  # default configuration for services in *this* file
   _defaults:
-    autowire: true      # Automatically injects dependencies in your services.
-    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+    autowire: true
+    autoconfigure: true
 
   Tourze\CATrustBundle\Command\:
     resource: '../../Command/'
+
+  Tourze\CATrustBundle\Verification\Checker\CrtShChecker: ~
+  Tourze\CATrustBundle\Verification\Checker\MozillaChecker: ~
+
+  Tourze\CATrustBundle\Command\CertificateTableFormatter:
+    arguments:
+      $checkers:
+        - '@Tourze\CATrustBundle\Verification\Checker\CrtShChecker'
+        - '@Tourze\CATrustBundle\Verification\Checker\MozillaChecker'
+
+  Tourze\CATrustBundle\Command\CertificateVerifier:
+    arguments:
+      $checkers:
+        - '@Tourze\CATrustBundle\Verification\Checker\CrtShChecker'
+        - '@Tourze\CATrustBundle\Verification\Checker\MozillaChecker'

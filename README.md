@@ -1,81 +1,230 @@
 # CA Trust Bundle
 
-这个Symfony包用于检查和管理系统根CA证书。
+[English](README.md) | [中文](README.zh-CN.md)
 
-## 安装
+[![Latest Version](https://img.shields.io/packagist/v/tourze/ca-trust-bundle.svg?style=flat-square)](
+https://packagist.org/packages/tourze/ca-trust-bundle)
+[![PHP Version](https://img.shields.io/packagist/php-v/tourze/ca-trust-bundle.svg?style=flat-square)](
+https://packagist.org/packages/tourze/ca-trust-bundle)
+[![License](https://img.shields.io/packagist/l/tourze/ca-trust-bundle.svg?style=flat-square)](
+https://packagist.org/packages/tourze/ca-trust-bundle)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/tourze/php-monorepo/test.yml?branch=master&style=flat-square)](
+https://github.com/tourze/php-monorepo/actions)
+[![Quality Score](https://img.shields.io/scrutinizer/g/tourze/ca-trust-bundle.svg?style=flat-square)](
+https://scrutinizer-ci.com/g/tourze/ca-trust-bundle)
+[![Code Coverage](https://img.shields.io/codecov/c/github/tourze/php-monorepo.svg?style=flat-square)](
+https://codecov.io/gh/tourze/php-monorepo)
+[![Total Downloads](https://img.shields.io/packagist/dt/tourze/ca-trust-bundle.svg?style=flat-square)](
+https://packagist.org/packages/tourze/ca-trust-bundle)
+
+A Symfony bundle for inspecting and verifying system root CA certificates to ensure security and 
+trustworthiness.
+
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+  - [Basic Commands](#basic-commands)
+  - [Output Format](#output-format)
+- [Certificate Verification](#certificate-verification)
+  - [Verification Services](#verification-services)
+  - [Verification Results](#verification-results)
+- [Advanced Usage](#advanced-usage)
+  - [Custom Verification Services](#custom-verification-services)
+  - [Integration with Logging](#integration-with-logging)
+  - [Performance Considerations](#performance-considerations)
+- [Dependencies](#dependencies)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Features
+
+- List and inspect system root CA certificates
+- Filter certificates by keyword, signature algorithm, or expiration status
+- Verify certificate trustworthiness against multiple online services
+- Output in both table and JSON formats
+- Comprehensive certificate details including fingerprint, issuer, and validity dates
+
+## Requirements
+
+- PHP 8.3 or higher
+- OpenSSL extension
+- Symfony 7.3 or higher
+
+## Installation
 
 ```bash
 composer require tourze/ca-trust-bundle
 ```
 
-## 功能
+## Configuration
 
-### 列出系统根证书
+This bundle works out of the box without additional configuration. The bundle automatically 
+registers its services when installed.
 
-该命令可以列出系统中的根证书，并提供多种过滤和搜索选项。
+## Quick Start
+
+After installation, you can immediately start using the bundle:
 
 ```bash
-# 列出所有证书
+# Register the bundle in your bundles.php (auto-configured in most cases)
+# Add to config/bundles.php:
+# Tourze\CATrustBundle\CATrustBundle::class => ['all' => true],
+
+# List all system certificates
 bin/console ca-trust:list-certs
 
-# 按关键词搜索证书（匹配组织名、颁发者或域名）
+# Search for specific certificates
+bin/console ca-trust:list-certs --keyword="DigiCert"
+
+# Verify certificate trustworthiness
+bin/console ca-trust:list-certs --verify
+```
+
+## Usage
+
+### Basic Commands
+
+```bash
+# List all certificates
+bin/console ca-trust:list-certs
+
+# Search certificates by keyword (matches organization, issuer, or domain)
 bin/console ca-trust:list-certs --keyword="DigiCert"
 bin/console ca-trust:list-certs -k "DigiCert"
 
-# 按签名算法搜索证书
+# Filter by signature algorithm
 bin/console ca-trust:list-certs --signature="SHA256"
 bin/console ca-trust:list-certs -s "SHA256"
 
-# 显示已过期的证书
+# Show expired certificates
 bin/console ca-trust:list-certs --show-expired
 
-# 以JSON格式输出
+# Output in JSON format
 bin/console ca-trust:list-certs --format=json
 bin/console ca-trust:list-certs -f json
 
-# 验证证书是否可信
+# Verify certificate trustworthiness
 bin/console ca-trust:list-certs --verify
-bin/console ca-trust:list-certs -v
+bin/console ca-trust:list-certs -c
 
-# 组合使用
-bin/console ca-trust:list-certs -k "DigiCert" -s "SHA256" --show-expired -v -f json
+# Combine multiple options
+bin/console ca-trust:list-certs -k "DigiCert" -s "SHA256" --show-expired -c -f json
 ```
 
-## 输出说明
+### Output Format
 
-表格输出包含以下列：
-- `#`: 序号
-- `组织`: 证书所属组织
-- `颁发者`: 证书颁发者
-- `域名`: 主域名
-- `签名`: 证书指纹
-- `生效日期`: 证书开始生效日期
-- `过期日期`: 证书过期日期
-- `签名算法`: 使用的签名算法
+#### Table Output
 
-当使用`--verify`选项时，还会包含以下列：
-- 各验证服务的验证结果（通过/失败/存疑）
-- 综合验证结果
+The table output includes the following columns:
+- `#`: Index number
+- `Organization`: Certificate organization
+- `Issuer`: Certificate issuer
+- `Domain`: Primary domain
+- `Signature`: Certificate fingerprint
+- `Valid From`: Certificate validity start date
+- `Valid Until`: Certificate expiration date
+- `Signature Algorithm`: Algorithm used for signing
 
-JSON输出包含更详细的信息，包括指纹和完整的域名列表，以及验证结果（如果使用了`--verify`选项）。
+When using the `--verify` option, additional columns appear:
+- Verification results from each service (Pass/Fail/Unknown)
+- Overall verification status
 
-## 证书验证
+#### JSON Output
 
-当使用`--verify`选项时，系统会通过多个在线服务来验证证书是否可信：
+JSON output provides more detailed information including:
+- Complete fingerprint
+- Full domain list
+- Verification results (when using `--verify`)
+- Additional certificate metadata
 
-1. **crt.sh** - 检查证书是否在公共CT（证书透明度）日志中
-2. **Mozilla** - 检查证书是否在Mozilla根证书列表中
-3. **SSLMate** - 使用SSLMate的Cert Spotter API验证证书
+## Certificate Verification
 
-验证结果可能为：
-- **通过** - 证书经过验证，被认为是可信的
-- **失败** - 证书未通过验证，可能不可信
-- **存疑** - 由于连接问题或API限制，无法确定证书状态
+When using the `--verify` option, the system verifies certificate trustworthiness through 
+multiple online services:
 
-## 技术说明
+### Verification Services
 
-该包使用了以下库：
-- `composer/ca-bundle`: 用于获取系统CA根证书
-- `spatie/ssl-certificate`: 用于解析和处理SSL证书
-- `symfony/console`: 用于创建命令行工具
-- `symfony/http-client`: 用于与在线验证服务交互
+1. **crt.sh** - Checks if the certificate exists in public Certificate Transparency (CT) logs
+2. **Mozilla** - Verifies if the certificate is in Mozilla's trusted root certificate list
+
+### Verification Results
+
+- **Pass** - Certificate is verified and considered trustworthy
+- **Fail** - Certificate failed verification and may not be trustworthy
+- **Unknown** - Unable to determine certificate status due to connection issues or API limitations
+
+## Advanced Usage
+
+### Custom Verification Services
+
+You can extend the bundle by creating custom certificate verification services. 
+Implement the `CheckerInterface` and register your service:
+
+```php
+use Tourze\CATrustBundle\Verification\CheckerInterface;
+use Tourze\CATrustBundle\Verification\VerificationStatus;
+
+class CustomChecker implements CheckerInterface 
+{
+    public function verify(SslCertificate $certificate): VerificationStatus
+    {
+        // Your verification logic here
+        return VerificationStatus::PASSED;
+    }
+    
+    public function getName(): string
+    {
+        return 'Custom';
+    }
+}
+```
+
+### Integration with Logging
+
+The bundle supports PSR-3 compatible logging for audit trails:
+
+```php
+use Tourze\CATrustBundle\Verification\Checker\CrtShChecker;
+use Psr\Log\LoggerInterface;
+
+$logger = // your logger instance
+$checker = new CrtShChecker($logger);
+```
+
+### Performance Considerations
+
+- Verification requests are made synchronously and may take time
+- Consider caching verification results for frequently checked certificates
+- Network timeouts may affect verification accuracy
+
+## Dependencies
+
+This bundle relies on the following key libraries:
+- `composer/ca-bundle`: For retrieving system CA root certificates
+- `spatie/ssl-certificate`: For parsing and processing SSL certificates
+- `symfony/console`: For creating command-line tools
+- `symfony/http-client`: For interacting with online verification services
+
+## Testing
+
+```bash
+# Run tests
+./vendor/bin/phpunit packages/ca-trust-bundle/tests
+
+# Run static analysis
+php -d memory_limit=2G ./vendor/bin/phpstan analyse packages/ca-trust-bundle
+```
+
+## Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this project.
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE) for more information.

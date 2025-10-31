@@ -2,38 +2,34 @@
 
 namespace Tourze\CATrustBundle\Tests\DependencyInjection;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Tourze\CATrustBundle\Command\ListSystemCertsCommand;
 use Tourze\CATrustBundle\DependencyInjection\CATrustExtension;
+use Tourze\PHPUnitSymfonyUnitTest\AbstractDependencyInjectionExtensionTestCase;
 
-class CATrustExtensionTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(CATrustExtension::class)]
+final class CATrustExtensionTest extends AbstractDependencyInjectionExtensionTestCase
 {
-    /**
-     * 测试扩展加载配置
-     */
-    public function testLoad(): void
+    protected function getContainer(): ContainerBuilder
     {
         $container = new ContainerBuilder();
-        $extension = new CATrustExtension();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.debug', true);
 
-        $extension->load([], $container);
-
-        // 验证命令服务是否被正确注册
-        $this->assertTrue($container->has(ListSystemCertsCommand::class));
-
-        // 验证自动配置是否开启
-        $definition = $container->getDefinition(ListSystemCertsCommand::class);
-        $this->assertTrue($definition->isAutoconfigured());
-        $this->assertTrue($definition->isAutowired());
+        return $container;
     }
 
     /**
-     * 测试扩展实例化
+     * 测试扩展别名和配置
      */
-    public function testExtensionInstantiation(): void
+    public function testExtensionAlias(): void
     {
         $extension = new CATrustExtension();
-        $this->assertInstanceOf(CATrustExtension::class, $extension);
+
+        // 验证扩展别名
+        $this->assertSame('ca_trust', $extension->getAlias());
     }
 }

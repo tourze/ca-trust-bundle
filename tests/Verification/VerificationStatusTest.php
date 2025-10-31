@@ -2,50 +2,27 @@
 
 namespace Tourze\CATrustBundle\Tests\Verification;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Tourze\CATrustBundle\Verification\VerificationStatus;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class VerificationStatusTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(VerificationStatus::class)]
+final class VerificationStatusTest extends AbstractEnumTestCase
 {
     /**
-     * 测试枚举值是否正确
+     * 测试 toArray 方法
      */
-    public function testEnumValues(): void
-    {
-        $this->assertSame('通过', VerificationStatus::PASSED->value);
-        $this->assertSame('失败', VerificationStatus::FAILED->value);
-        $this->assertSame('存疑', VerificationStatus::UNCERTAIN->value);
-    }
-
-    /**
-     * 测试枚举基本功能
-     */
-    public function testEnumFunctionality(): void
+    public function testToArray(): void
     {
         $status = VerificationStatus::PASSED;
-        
-        $this->assertInstanceOf(VerificationStatus::class, $status);
+        $array = $status->toArray();
+        $this->assertIsArray($array);
+        $this->assertArrayHasKey('value', $array);
+        $this->assertArrayHasKey('label', $array);
+        $this->assertSame('通过', $array['value']);
+        $this->assertSame('通过', $array['label']);
     }
-
-    /**
-     * 测试枚举通过函数获取描述
-     */
-    public function testEnumDescription(): void
-    {
-        $this->assertSame('通过', VerificationStatus::PASSED->value);
-        $this->assertSame('失败', VerificationStatus::FAILED->value);
-        $this->assertSame('存疑', VerificationStatus::UNCERTAIN->value);
-    }
-    
-    /**
-     * 测试枚举案例数量
-     */
-    public function testEnumCases(): void
-    {
-        $cases = VerificationStatus::cases();
-        $this->assertCount(3, $cases);
-        $this->assertContains(VerificationStatus::PASSED, $cases);
-        $this->assertContains(VerificationStatus::FAILED, $cases);
-        $this->assertContains(VerificationStatus::UNCERTAIN, $cases);
-    }
-} 
+}

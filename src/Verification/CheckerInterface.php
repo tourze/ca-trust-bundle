@@ -10,7 +10,7 @@ interface CheckerInterface
      * 验证证书是否可信
      */
     public function verify(SslCertificate $certificate): VerificationStatus;
-    
+
     /**
      * 获取验证器名称
      */

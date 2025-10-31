@@ -2,6 +2,8 @@
 
 namespace Tourze\CATrustBundle\Verification\Checker;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Spatie\SslCertificate\SslCertificate;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -22,36 +24,65 @@ class MozillaChecker implements CheckerInterface
     private string $apiEndpoint = 'https://ccadb-public.secure.force.com/mozilla/IncludedCACertificateReportPEMCSV';
 
     /**
-     * @var array|null 缓存的根证书指纹列表
+     * @var array<string>|null 缓存的根证书指纹列表
      */
     private ?array $rootFingerprints = null;
+
+    private LoggerInterface $logger;
+
+    public function __construct(?LoggerInterface $logger = null)
+    {
+        $this->logger = $logger ?? new NullLogger();
+    }
 
     public function verify(SslCertificate $certificate): VerificationStatus
     {
         try {
-            // 使用已有的getFingerprintSha256()方法
             $sha256Fingerprint = $certificate->getFingerprintSha256();
-            if (empty($sha256Fingerprint)) {
+            if ('' === $sha256Fingerprint) {
+                $this->logger->info('Certificate SHA256 fingerprint is empty', [
+                    'domain' => $certificate->getDomain(),
+                    'issuer' => $certificate->getIssuer(),
+                ]);
+
                 return VerificationStatus::UNCERTAIN;
             }
 
             // 统一格式为小写无冒号
             $sha256Fingerprint = strtolower(str_replace(':', '', $sha256Fingerprint));
 
+            $this->logger->info('Starting Mozilla verification', [
+                'fingerprint' => $sha256Fingerprint,
+                'domain' => $certificate->getDomain(),
+            ]);
+
             // 加载Mozilla根证书列表（如果尚未加载）
-            if ($this->rootFingerprints === null) {
+            if (null === $this->rootFingerprints) {
                 if (!$this->loadRootFingerprints()) {
+                    $this->logger->warning('Failed to load Mozilla root fingerprints');
+
                     return VerificationStatus::UNCERTAIN;
                 }
             }
 
             // 检查指纹是否在Mozilla根证书列表中
-            if (in_array($sha256Fingerprint, $this->rootFingerprints, true)) {
-                return VerificationStatus::PASSED;
-            }
+            $found = in_array($sha256Fingerprint, $this->rootFingerprints ?? [], true);
+            $status = $found ? VerificationStatus::PASSED : VerificationStatus::FAILED;
 
-            return VerificationStatus::FAILED;
+            $this->logger->info('Mozilla verification completed', [
+                'fingerprint' => $sha256Fingerprint,
+                'status' => $status->value,
+                'found' => $found,
+                'total_root_certs' => count($this->rootFingerprints ?? []),
+            ]);
+
+            return $status;
         } catch (\Throwable $e) {
+            $this->logger->error('Unexpected error during Mozilla verification', [
+                'error' => $e->getMessage(),
+                'exception_class' => get_class($e),
+            ]);
+
             return VerificationStatus::UNCERTAIN;
         }
     }
@@ -61,20 +92,72 @@ class MozillaChecker implements CheckerInterface
      */
     private function loadRootFingerprints(): bool
     {
+        $startTime = microtime(true);
+
         try {
+            $this->logger->info('Starting to load Mozilla root fingerprints', [
+                'endpoint' => $this->apiEndpoint,
+            ]);
+
             $client = $this->createHttpClient();
+
+            // 审计日志：记录 HTTP 请求详细信息
+            $this->logger->info('Mozilla HTTP request started', [
+                'method' => 'GET',
+                'url' => $this->apiEndpoint,
+            ]);
+
+            // @audit-logged HTTP request with comprehensive logging before and after
             $response = $client->request('GET', $this->apiEndpoint);
 
-            if ($response->getStatusCode() !== 200) {
+            $statusCode = $response->getStatusCode();
+            $responseTime = microtime(true) - $startTime;
+
+            // 审计日志：记录 HTTP 响应结果
+            $this->logger->info('Mozilla HTTP response received', [
+                'status_code' => $statusCode,
+                'response_time' => $responseTime,
+            ]);
+
+            if (200 !== $statusCode) {
+                $this->logger->error('Mozilla API returned non-200 status code', [
+                    'status_code' => $statusCode,
+                    'response_time' => $responseTime,
+                ]);
+
                 return false;
             }
 
             $csvContent = $response->getContent();
+            $contentSize = strlen($csvContent);
 
-            return $this->parseCsvContent($csvContent);
+            $success = $this->parseCsvContent($csvContent);
+
+            $this->logger->info('Mozilla root fingerprints loading completed', [
+                'success' => $success,
+                'response_time' => $responseTime,
+                'content_size' => $contentSize,
+                'fingerprints_loaded' => $success ? count($this->rootFingerprints ?? []) : 0,
+            ]);
+
+            return $success;
         } catch (ExceptionInterface $e) {
+            $responseTime = microtime(true) - $startTime;
+            $this->logger->error('Mozilla API request failed', [
+                'error' => $e->getMessage(),
+                'response_time' => $responseTime,
+                'exception_class' => get_class($e),
+            ]);
+
             return false;
         } catch (\Throwable $e) {
+            $responseTime = microtime(true) - $startTime;
+            $this->logger->error('Unexpected error loading Mozilla root fingerprints', [
+                'error' => $e->getMessage(),
+                'response_time' => $responseTime,
+                'exception_class' => get_class($e),
+            ]);
+
             return false;
         }
     }
@@ -84,59 +167,76 @@ class MozillaChecker implements CheckerInterface
      */
     private function parseCsvContent(string $csvContent): bool
     {
-        // 初始化指纹列表
         $this->rootFingerprints = [];
-
         $lines = explode("\n", $csvContent);
 
-        // 指纹列索引
-        $fingerprintIndex = -1;
-
-        // 处理头部信息，确定SHA-256指纹所在列
-        $headerLine = array_shift($lines);
-        $headers = str_getcsv($headerLine, ',', '"', '\\');
-
-        foreach ($headers as $index => $header) {
-            if (stripos($header, 'SHA-256 Fingerprint') !== false) {
-                $fingerprintIndex = $index;
-                break;
-            }
-        }
-
-        // 如果找不到指纹列，返回失败
-        if ($fingerprintIndex === -1) {
+        $result = $this->findFingerprintColumnIndex($lines);
+        if (-1 === $result['index']) {
             return false;
         }
 
-        // 解析每一行，提取指纹
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (empty($line)) {
-                continue;
-            }
+        $this->extractFingerprints($result['lines'], $result['index']);
 
-            // 按CSV格式解析行
-            $columns = str_getcsv($line, ',', '"', '\\');
+        return [] !== $this->rootFingerprints && null !== $this->rootFingerprints;
+    }
 
-            // 确保有足够的列
-            if (count($columns) > $fingerprintIndex) {
-                $fingerprint = trim($columns[$fingerprintIndex]);
-                if (!empty($fingerprint)) {
-                    // 转为小写并去除冒号和空格
-                    $fingerprint = strtolower(str_replace([':', ' '], '', $fingerprint));
-                    $this->rootFingerprints[] = $fingerprint;
-                }
+    /**
+     * @param array<string> $lines
+     * @return array{index: int, lines: array<string>}
+     */
+    private function findFingerprintColumnIndex(array $lines): array
+    {
+        $headerLine = array_shift($lines) ?? '';
+        $headers = str_getcsv($headerLine, ',', '"', '\\');
+
+        foreach ($headers as $index => $header) {
+            if (false !== stripos($header ?? '', 'SHA-256 Fingerprint')) {
+                return ['index' => $index, 'lines' => $lines];
             }
         }
 
-        return !empty($this->rootFingerprints);
+        return ['index' => -1, 'lines' => $lines];
+    }
+
+    /**
+     * @param array<string> $lines
+     */
+    private function extractFingerprints(array $lines, int $fingerprintIndex): void
+    {
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ('' === $line) {
+                continue;
+            }
+
+            $fingerprint = $this->extractFingerprintFromLine($line, $fingerprintIndex);
+            if (null !== $fingerprint) {
+                $this->rootFingerprints[] = $fingerprint;
+            }
+        }
+    }
+
+    private function extractFingerprintFromLine(string $line, int $fingerprintIndex): ?string
+    {
+        $columns = str_getcsv($line, ',', '"', '\\');
+
+        if (count($columns) <= $fingerprintIndex) {
+            return null;
+        }
+
+        $fingerprint = trim($columns[$fingerprintIndex] ?? '');
+        if ('' === $fingerprint) {
+            return null;
+        }
+
+        return strtolower(str_replace([':', ' '], '', $fingerprint));
     }
 
     public function getName(): string
     {
         return 'Mozilla';
     }
-    
+
     /**
      * 创建HTTP客户端，方便测试时进行模拟
      */

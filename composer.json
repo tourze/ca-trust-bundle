@@ -3,23 +3,30 @@
   "description": "Check local CA file security",
   "license": "MIT",
   "require": {
-    "php": "^8.1",
+    "ext-json": "*",
     "ext-openssl": "*",
+    "ext-pcre": "*",
     "composer/ca-bundle": "^1.5.6",
+    "psr/log": "^3|^2|^1",
     "spatie/ssl-certificate": "^2.6.9",
-    "symfony/config": "^6.4",
-    "symfony/console": "^6.4",
-    "symfony/dependency-injection": "^6.4",
-    "symfony/framework-bundle": "^6.4",
-    "symfony/http-client": "^6.4",
-    "symfony/http-client-contracts": "^2.5 | ^3.0",
-    "symfony/http-kernel": "^6.4",
-    "symfony/yaml": "^6.4 || ^7.1",
+    "symfony/config": "^7.3",
+    "symfony/console": "^7.3",
+    "symfony/dependency-injection": "^7.3",
+    "symfony/framework-bundle": "^7.3",
+    "symfony/http-client": "^7.3",
+    "symfony/http-client-contracts": "^3.6",
+    "symfony/http-kernel": "^7.3",
+    "symfony/yaml": "^7.3",
     "tourze/enum-extra": "0.1.*"
   },
   "require-dev": {
     "phpstan/phpstan": "^2.1",
-    "phpunit/phpunit": "^10.0"
+    "phpunit/phpunit": "^11.5",
+    "tourze/phpunit-enum": "0.0.*",
+    "tourze/phpunit-symfony-kernel-test": "0.0.*",
+    "tourze/phpunit-symfony-unit-test": "0.0.*",
+    "tourze/symfony-dependency-service-loader": "0.0.*",
+    "tourze/symfony-testing-framework": "0.0.*"
   },
   "autoload": {
     "psr-4": {

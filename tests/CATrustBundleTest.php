@@ -1,27 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tourze\CATrustBundle\Tests;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\CATrustBundle\CATrustBundle;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractBundleTestCase;
 
-class CATrustBundleTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(CATrustBundle::class)]
+#[RunTestsInSeparateProcesses]
+final class CATrustBundleTest extends AbstractBundleTestCase
 {
-    /**
-     * 测试Bundle基础实例化
-     */
-    public function testBundleInstantiation(): void
-    {
-        $bundle = new CATrustBundle();
-        $this->assertInstanceOf(CATrustBundle::class, $bundle);
-    }
-
-    /**
-     * 测试Bundle继承关系
-     */
-    public function testBundleInheritance(): void
-    {
-        $bundle = new CATrustBundle();
-        $this->assertInstanceOf(\Symfony\Component\HttpKernel\Bundle\Bundle::class, $bundle);
-    }
-} 
+}
