@@ -4,7 +4,7 @@ namespace Tourze\CATrustBundle\DependencyInjection;
 
 use Tourze\SymfonyDependencyServiceLoader\AutoExtension;
 
-class CATrustExtension extends AutoExtension
+final class CATrustExtension extends AutoExtension
 {
     protected function getConfigDir(): string
     {
